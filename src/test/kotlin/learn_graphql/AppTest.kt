@@ -8,7 +8,7 @@ import kotlin.test.assertNotNull
 
 class AppTest {
     @Test fun testAppHasAGreeting() {
-        val app = App()
+        val app = GraphqlApp()
 
         val graphQL = app.graphQL
         assertNotNull(graphQL.execute("""{bookById(id:"book-1"){name}}""").getData<Any>().also {

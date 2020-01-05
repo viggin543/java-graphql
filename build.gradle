@@ -46,4 +46,4 @@ compileTestKotlin {
 }
 
 // Define the main class for the application.
-mainClassName = 'java.graphql.AppKt'
+mainClassName = "learn_graphql.GraphqlAppKt"

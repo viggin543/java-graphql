@@ -19,7 +19,7 @@ import io.vertx.kotlin.core.http.listenAwait
 import io.vertx.kotlin.coroutines.CoroutineVerticle
 
 
-class App {
+class GraphqlApp {
     private val graphQLDataFetchers = GraphQLDataFetchers()
 
     val graphQL: GraphQL = GraphQL.newGraphQL(SchemaGenerator()
@@ -47,14 +47,14 @@ class App {
 
 class GraphQLDataFetchers() {
     val userFetcher: VertxDataFetcher<String>
-            get() {
-                return VertxDataFetcher { env,future ->
-                    val ctx: RoutingContext = env.getContext()
-                    val id = ctx.request().headers()["TG-USER-ID"]
-                    future.complete(id)
-                }
+        get() {
+            return VertxDataFetcher { env, future ->
+                val ctx: RoutingContext = env.getContext()
+                val id = ctx.request().headers()["TG-USER-ID"]
+                future.complete(id)
             }
-    val bookByIdDataFetcher: DataFetcher<Map<String,String>>
+        }
+    val bookByIdDataFetcher: DataFetcher<Map<String, String>>
         get() = DataFetcher { dataFetchingEnvironment: DataFetchingEnvironment ->
             val bookId: String = dataFetchingEnvironment.getArgument("id")
             books
@@ -65,19 +65,19 @@ class GraphQLDataFetchers() {
         }
 
     val getPageCountDataFetcher: VertxDataFetcher<String?>
-        get(){
-            return VertxDataFetcher { env,future ->
-                val ctx : RoutingContext = env.getContext()
+        get() {
+            return VertxDataFetcher { env, future ->
+                val ctx: RoutingContext = env.getContext()
                 val uid = ctx.request().headers()["TG-USER-ID"]
-                val source : Map<String,String> = env.getSource()
+                val source: Map<String, String> = env.getSource()
                 future.complete(source["pageCount"]).also {
                     println(" got request from user $uid")
                 }
             }
         }
 
-    val authorDataFetcher: DataFetcher<Map<String,String>>
-//. Compared to the previously described book DataFetcher, we don’t have an argument, but we have a book instance.
+    val authorDataFetcher: DataFetcher<Map<String, String>>
+        //. Compared to the previously described book DataFetcher, we don’t have an argument, but we have a book instance.
 // The result of the DataFetcher from the parent field is made available via getSource.
 // This is an important concept to understand: the DataFetcher for each field in GraphQL
 // are called in a top-down fashion and the parent’s result is the source property of the child DataFetcherEnvironment.
@@ -95,18 +95,18 @@ class GraphQLDataFetchers() {
 
     companion object {
         private val books: List<Map<String, String>> = listOf(
-                mapOf("id" to  "book-1",
-                        "name" to  "Harry Potter and the Philosopher's Stone",
-                        "pageCount" to  "223",
-                        "authorId" to  "author-1"),
-                mapOf("id" to  "book-2",
-                        "name" to  "Moby Dick",
-                        "pageCount" to  "635",
-                        "authorId" to  "author-2"),
-                mapOf("id" to  "book-3",
-                        "name" to  "Interview with the vampire",
-                        "pageCount" to  "371",
-                        "authorId" to  "author-3")
+                mapOf("id" to "book-1",
+                        "name" to "Harry Potter and the Philosopher's Stone",
+                        "pageCount" to "223",
+                        "authorId" to "author-1"),
+                mapOf("id" to "book-2",
+                        "name" to "Moby Dick",
+                        "pageCount" to "635",
+                        "authorId" to "author-2"),
+                mapOf("id" to "book-3",
+                        "name" to "Interview with the vampire",
+                        "pageCount" to "371",
+                        "authorId" to "author-3")
         )
         private val authors: List<Map<String, String>> = listOf(
                 mapOf("id" to "author-1",
@@ -125,7 +125,7 @@ class GraphQLDataFetchers() {
 open class VertxApp : CoroutineVerticle() {
 
     override suspend fun start() {
-        val app = App()
+        val app = GraphqlApp()
         vertx.createHttpServer().requestHandler(router(vertx).apply {
             route("/graphql").handler(GraphQLHandler.create(app.graphQL))
             route("/graphiql/*").handler(GraphiQLHandler.create(GraphiQLHandlerOptions()
