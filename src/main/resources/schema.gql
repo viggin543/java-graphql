@@ -8,6 +8,7 @@ type Book {
     name: String
     pageCount: Int
     author: Author
+    user: String
 }
 type Author {
     id: ID

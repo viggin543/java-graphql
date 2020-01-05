@@ -8,7 +8,13 @@ import kotlin.test.assertNotNull
 
 class AppTest {
     @Test fun testAppHasAGreeting() {
+        val app = App()
 
-        assertNotNull(null, "app should have a greeting")
+        val graphQL = app.graphQL
+        assertNotNull(graphQL.execute("""{bookById(id:"book-1"){name}}""").getData<Any>().also {
+            println(it)
+        },"query should work")
+        assertNotNull(graphQL.execute("{banana}").getData<Any>().also { println(it) },
+                "i like bananas")
     }
 }

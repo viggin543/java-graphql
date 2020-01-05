@@ -8,6 +8,15 @@ import graphql.schema.idl.RuntimeWiring.newRuntimeWiring
 import graphql.schema.idl.SchemaGenerator
 import graphql.schema.idl.SchemaParser
 import graphql.schema.idl.TypeRuntimeWiring.newTypeWiring
+import io.vertx.core.Vertx
+import io.vertx.ext.web.Router.router
+import io.vertx.ext.web.RoutingContext
+import io.vertx.ext.web.handler.graphql.GraphQLHandler
+import io.vertx.ext.web.handler.graphql.GraphiQLHandler
+import io.vertx.ext.web.handler.graphql.GraphiQLHandlerOptions
+import io.vertx.ext.web.handler.graphql.VertxDataFetcher
+import io.vertx.kotlin.core.http.listenAwait
+import io.vertx.kotlin.coroutines.CoroutineVerticle
 
 
 class App {
@@ -29,6 +38,7 @@ class App {
 // is used. In our case it means Book.id, Book.name, Book.pageCount, Author.id, Author.firstName
 // and Author.lastName all have a default PropertyDataFetcher associated with it.
                             .dataFetcher("author", graphQLDataFetchers.authorDataFetcher)
+                            .dataFetcher("user", graphQLDataFetchers.userFetcher)
                             .dataFetcher("pageCount", graphQLDataFetchers.getPageCountDataFetcher))
                     .build()))
             .build()
@@ -36,6 +46,14 @@ class App {
 
 
 class GraphQLDataFetchers() {
+    val userFetcher: VertxDataFetcher<String>
+            get() {
+                return VertxDataFetcher { env,future ->
+                    val ctx: RoutingContext = env.getContext()
+                    val id = ctx.request().headers()["TG-USER-ID"]
+                    future.complete(id)
+                }
+            }
     val bookByIdDataFetcher: DataFetcher<Map<String,String>>
         get() = DataFetcher { dataFetchingEnvironment: DataFetchingEnvironment ->
             val bookId: String = dataFetchingEnvironment.getArgument("id")
@@ -46,11 +64,15 @@ class GraphQLDataFetchers() {
                     .orElse(null)
         }
 
-    val getPageCountDataFetcher: DataFetcher<String?>
+    val getPageCountDataFetcher: VertxDataFetcher<String?>
         get(){
-            return DataFetcher {
-                val source : Map<String,String> = it.getSource()
-                source["pageCount"]
+            return VertxDataFetcher { env,future ->
+                val ctx : RoutingContext = env.getContext()
+                val uid = ctx.request().headers()["TG-USER-ID"]
+                val source : Map<String,String> = env.getSource()
+                future.complete(source["pageCount"]).also {
+                    println(" got request from user $uid")
+                }
             }
         }
 
@@ -99,10 +121,25 @@ class GraphQLDataFetchers() {
         )
     }
 }
-fun main() {
 
-    val app = App()
+open class VertxApp : CoroutineVerticle() {
 
-    println(app.graphQL.execute("{banana}").getData<Any>().toString())
-    println(app.graphQL.execute("""{bookById(id:"book-1"){name}}""").getData<Any>().toString())
+    override suspend fun start() {
+        val app = App()
+        vertx.createHttpServer().requestHandler(router(vertx).apply {
+            route("/graphql").handler(GraphQLHandler.create(app.graphQL))
+            route("/graphiql/*").handler(GraphiQLHandler.create(GraphiQLHandlerOptions()
+                    .setEnabled(true))) // disabled for security reasons
+        }).listenAwait(8090).also {
+            println("up and running on port 8090")
+        }
+    }
 }
+
+fun main() {
+    val vertx = Vertx.vertx()
+    vertx.deployVerticle(VertxApp())
+}
+// curl -s 'http://localhost:8090/graphql'  -H 'TG-USER-ID: 123-i-do-it-like-a-track' -H 'Content-Type: application/json' --data '{"query":"{  bookById(id: \"book-1\"){  user  name    pageCount author { id firstName } }}"}' | jq .
+
+
